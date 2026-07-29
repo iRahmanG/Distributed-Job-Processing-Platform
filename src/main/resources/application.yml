@@ -1,0 +1,6 @@
+spring:
+  application:
+    name: distributed-job-platform
+
+server:
+  port: 8080
