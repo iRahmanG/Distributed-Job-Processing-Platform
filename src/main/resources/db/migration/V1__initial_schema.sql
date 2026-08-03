@@ -5,14 +5,15 @@
 
 CREATE TABLE jobs (
 
-    job_id CHAR(26) PRIMARY KEY,
+    job_id VARCHAR(26) PRIMARY KEY,
 
     job_type VARCHAR(50) NOT NULL,
 
     status VARCHAR(20) NOT NULL
         CHECK (
             status IN (
-                'PENDING',
+                'CREATED',
+                'QUEUED',
                 'PROCESSING',
                 'COMPLETED',
                 'FAILED',
@@ -20,14 +21,13 @@ CREATE TABLE jobs (
             )
         ),
 
-    priority VARCHAR(2) NOT NULL
+    priority VARCHAR(20) NOT NULL
         CHECK (
             priority IN (
-                'P0',
-                'P1',
-                'P2',
-                'P3',
-                'P4'
+                'LOW',
+                'NORMAL',
+                'HIGH',
+                'CRITICAL'
             )
         ),
 
@@ -44,7 +44,7 @@ CREATE TABLE job_payloads (
 
     payload_id BIGSERIAL PRIMARY KEY,
 
-    job_id CHAR(26) NOT NULL UNIQUE,
+    job_id VARCHAR(26) NOT NULL UNIQUE,
 
     payload JSONB NOT NULL,
 
@@ -61,7 +61,7 @@ CREATE TABLE outbox (
 
     event_id BIGSERIAL PRIMARY KEY,
 
-    job_id CHAR(26) NOT NULL,
+    job_id VARCHAR(26) NOT NULL,
 
     event_type VARCHAR(50) NOT NULL,
 
