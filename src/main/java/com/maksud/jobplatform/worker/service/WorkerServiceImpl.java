@@ -41,9 +41,17 @@ public class WorkerServiceImpl implements WorkerService{
                         new IllegalArgumentException("Payload not found for job : " + job.getJobId()));
 
         try {
-            job.setStatus(JobStatus.PROCESSING);
-            job.setUpdatedAt(LocalDateTime.now());
-            jobRepository.save(job);
+            // Atomic Job Claim
+            int claimed = jobRepository.claimJob(
+                    job.getJobId(),
+                    JobStatus.QUEUED,
+                    JobStatus.PROCESSING,
+                    LocalDateTime.now()
+            );
+
+            if(claimed == 0){
+                return;
+            }
 
             jobExecutor.execute(
                     job.getJobType(),

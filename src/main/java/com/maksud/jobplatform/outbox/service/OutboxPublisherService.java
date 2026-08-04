@@ -1,6 +1,9 @@
 package com.maksud.jobplatform.outbox.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.maksud.jobplatform.job.entity.Job;
+import com.maksud.jobplatform.job.entity.enums.JobStatus;
+import com.maksud.jobplatform.job.repository.JobRepository;
 import com.maksud.jobplatform.outbox.dto.JobCreatedEvent;
 import com.maksud.jobplatform.outbox.entity.OutboxEvent;
 import com.maksud.jobplatform.outbox.enums.OutboxStatus;
@@ -24,6 +27,7 @@ public class OutboxPublisherService {
     private final OutboxRepository outboxRepository;
     private final KafkaTemplate<String, String> kafkaTemplate;
     private final ObjectMapper objectMapper;
+    private final JobRepository jobRepository;
 
     @Transactional
     public void publishPendingEvent(){
@@ -32,14 +36,14 @@ public class OutboxPublisherService {
         );
 
         for(OutboxEvent event: events){
-            JobCreatedEvent kafakEvent = new JobCreatedEvent(
+            JobCreatedEvent kafkaEvent = new JobCreatedEvent(
               event.getEventId(),
               event.getJobId(),
               event.getEventType().name()
             );
 
             try {
-                String message  = objectMapper.writeValueAsString(kafakEvent);
+                String message  = objectMapper.writeValueAsString(kafkaEvent);
                 kafkaTemplate
                         .send(TOPIC, event.getJobId(), message)
                         .get();
@@ -47,6 +51,14 @@ public class OutboxPublisherService {
                 event.setStatus(OutboxStatus.PUBLISHED);
                 event.setPublishedAt(LocalDateTime.now());
 
+                Job job = jobRepository.findById(event.getJobId())
+                                .orElseThrow(() ->
+                                        new IllegalArgumentException("Job not found : " + event.getJobId()));
+
+                job.setStatus(JobStatus.QUEUED);
+                job.setUpdatedAt(LocalDateTime.now());
+
+                jobRepository.save(job);
                 outboxRepository.save(event);
             } catch (Exception e){
 
