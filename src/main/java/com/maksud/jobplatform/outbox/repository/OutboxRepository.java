@@ -18,4 +18,9 @@ public interface OutboxRepository extends JpaRepository<OutboxEvent, String> {
     List<OutboxEvent> findTop100ByStatusOrderByCreatedAtAsc(
             OutboxStatus status
     );
+
+    Page<OutboxEvent> findByStatusOrderByCreatedAtAsc(
+            OutboxStatus status,
+            Pageable pageable
+    );
 }

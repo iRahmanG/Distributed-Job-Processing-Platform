@@ -1,7 +1,5 @@
 package com.maksud.jobplatform.outbox.service;
 
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.maksud.jobplatform.outbox.dto.JobCreatedEvent;
 import com.maksud.jobplatform.outbox.entity.OutboxEvent;
@@ -9,6 +7,7 @@ import com.maksud.jobplatform.outbox.enums.OutboxStatus;
 import com.maksud.jobplatform.outbox.repository.OutboxRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
@@ -17,6 +16,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class OutboxPublisherService {
 
     private static final String TOPIC = "jobs.created";
@@ -49,6 +49,8 @@ public class OutboxPublisherService {
 
                 outboxRepository.save(event);
             } catch (Exception e){
+
+                log.error("Failed to publish event {}", event.getEventId(), e);
                 throw new RuntimeException(e);
             }
         }
