@@ -27,4 +27,32 @@ public interface JobRepository extends JpaRepository<Job, String> {
             @Param("processingStatus") JobStatus processingStatus,
             @Param("updatedAt")LocalDateTime updatedAt
     );
+
+    @Modifying
+    @Query("""
+    UPDATE Job j
+    SET j.status = :status,
+        j.updatedAt = :updatedAt
+    WHERE j.jobId = :jobId
+""")
+    int updateStatus(
+            @Param("jobId") String jobId,
+            @Param("status") JobStatus status,
+            @Param("updatedAt") LocalDateTime updatedAt
+    );
+
+    @Modifying
+    @Query("""
+    UPDATE Job j
+    SET j.status = :status,
+        j.retryCount = :retryCount,
+        j.updatedAt = :updatedAt
+    WHERE j.jobId = :jobId
+    """)
+    int updateExecutionResult(
+            @Param("jobId") String jobId,
+            @Param("status") JobStatus status,
+            @Param("retryCount") int retryCount,
+            @Param("updatedAt") LocalDateTime updatedAt
+    );
 }

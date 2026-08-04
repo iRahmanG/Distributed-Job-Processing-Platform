@@ -8,13 +8,16 @@ import com.maksud.jobplatform.job.repository.JobPayloadRepository;
 import com.maksud.jobplatform.job.repository.JobRepository;
 import com.maksud.jobplatform.outbox.dto.JobCreatedEvent;
 import com.maksud.jobplatform.worker.executer.JobExecutor;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class WorkerServiceImpl implements WorkerService{
 
     private final ObjectMapper objectMapper;
@@ -23,6 +26,7 @@ public class WorkerServiceImpl implements WorkerService{
     private final JobExecutor jobExecutor;
 
     @Override
+    @Transactional
     public void processJob(String message) {
 
         JobCreatedEvent event;
@@ -58,17 +62,19 @@ public class WorkerServiceImpl implements WorkerService{
                     payload.getPayload()
             );
 
-            job.setStatus(JobStatus.COMPLETED);
-            job.setUpdatedAt(LocalDateTime.now());
-            jobRepository.save(job);
+            jobRepository.updateStatus(
+                    job.getJobId(),
+                    JobStatus.COMPLETED,
+                    LocalDateTime.now()
+            );
         } catch (Exception e) {
-            job.setStatus(JobStatus.FAILED);
-            job.setUpdatedAt(LocalDateTime.now());
-            jobRepository.save(job);
-
-            throw e;
+            jobRepository.updateExecutionResult(
+                    job.getJobId(),
+                    JobStatus.RETRYING,
+                    job.getRetryCount() + 1,
+                    LocalDateTime.now()
+            );
+            log.error("Failed processing job {}", job.getJobId(), e);
         }
-
-        jobRepository.save(job);
     }
 }
