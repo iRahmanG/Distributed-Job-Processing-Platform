@@ -36,3 +36,7 @@ logging:
   level:
     org.springframework.jdbc: INFO
     org.hibernate.SQL: DEBUG
+
+job-platform:
+  outbox:
+    publish-interval-ms: 5000
