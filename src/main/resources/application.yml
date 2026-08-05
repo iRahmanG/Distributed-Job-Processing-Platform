@@ -40,3 +40,8 @@ logging:
 job-platform:
   outbox:
     publish-interval-ms: 5000
+
+  retry:
+    max-attempts: 3
+    delay-seconds: 30
+    interval-ms: 5000

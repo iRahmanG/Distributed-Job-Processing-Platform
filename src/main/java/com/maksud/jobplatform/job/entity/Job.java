@@ -33,6 +33,9 @@ public class Job {
     @Column(name = "retry_count", nullable = false)
     private int retryCount;
 
+    @Column(name = "next_retry_at")
+    private LocalDateTime nextRetryAt;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 

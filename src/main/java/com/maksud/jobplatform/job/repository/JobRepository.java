@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Repository
 public interface JobRepository extends JpaRepository<Job, String> {
@@ -54,5 +55,40 @@ public interface JobRepository extends JpaRepository<Job, String> {
             @Param("status") JobStatus status,
             @Param("retryCount") int retryCount,
             @Param("updatedAt") LocalDateTime updatedAt
+    );
+
+    @Modifying
+    @Query("""
+            UPDATE Job j
+            SET 
+                j.status = :status,
+                j.retryCount = :retryCount,
+                j.nextRetryAt = :nextRetryAt,
+                j.updatedAt = :updatedAt
+            WHERE j.jobId = :jobId
+            """)
+    int updateRetryState(
+            String jobId,
+            JobStatus status,
+            int retryCount,
+            LocalDateTime nextRetryAt,
+            LocalDateTime updatedAt
+    );
+
+    @Query("""
+    SELECT j
+    FROM Job j
+    WHERE j.status = :status
+      AND j.retryCount < :maxRetry
+    ORDER BY j.updatedAt ASC
+    """)
+    List<Job> findRetryableJobs(
+            @Param("status") JobStatus status,
+            @Param("maxRetry") int maxRetry
+    );
+
+    List<Job> findTop100ByStatusAndNextRetryAtLessThanEqualOrderByNextRetryAtAsc(
+            JobStatus status,
+            LocalDateTime now
     );
 }
