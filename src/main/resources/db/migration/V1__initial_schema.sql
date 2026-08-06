@@ -91,5 +91,3 @@ ON jobs(created_at);
 CREATE INDEX idx_outbox_published
 ON outbox(published);
 
-ALTER TABLE jobs
-ADD COLUMN next_retry_at TIMESTAMP;
