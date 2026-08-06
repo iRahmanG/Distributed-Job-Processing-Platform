@@ -27,10 +27,9 @@ public class OutboxPublisherService {
     private final OutboxRepository outboxRepository;
     private final KafkaTemplate<String, String> kafkaTemplate;
     private final ObjectMapper objectMapper;
-    private final JobRepository jobRepository;
 
     @Transactional
-    public void publishPendingEvent(){
+    public void publishPendingEvents(){
         List<OutboxEvent> events = outboxRepository.findTop100ByStatusOrderByCreatedAtAsc(
                 OutboxStatus.PENDING
         );
@@ -46,20 +45,14 @@ public class OutboxPublisherService {
                 String message  = objectMapper.writeValueAsString(kafkaEvent);
                 kafkaTemplate
                         .send(TOPIC, event.getJobId(), message)
-                        .get();
+                        .get(); //Fail-Fast
 
                 event.setStatus(OutboxStatus.PUBLISHED);
                 event.setPublishedAt(LocalDateTime.now());
 
-                Job job = jobRepository.findById(event.getJobId())
-                                .orElseThrow(() ->
-                                        new IllegalArgumentException("Job not found : " + event.getJobId()));
-
-                job.setStatus(JobStatus.QUEUED);
-                job.setUpdatedAt(LocalDateTime.now());
-
-                jobRepository.save(job);
                 outboxRepository.save(event);
+
+                log.info("Published outbox event {}", event.getEventId());
             } catch (Exception e){
 
                 log.error("Failed to publish event {}", event.getEventId(), e);

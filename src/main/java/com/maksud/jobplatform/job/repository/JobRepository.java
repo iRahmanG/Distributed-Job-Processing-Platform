@@ -90,4 +90,6 @@ public interface JobRepository extends JpaRepository<Job, String> {
             JobStatus status,
             LocalDateTime now
     );
+
+    List<Job> findTop100ByStatusOrderByUpdatedAtAsc(JobStatus status);
 }

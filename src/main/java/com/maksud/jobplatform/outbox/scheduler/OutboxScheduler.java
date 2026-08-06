@@ -13,7 +13,7 @@ public class OutboxScheduler {
 
     @Scheduled(fixedDelayString = "${job-platform.outbox.publish-interval-ms}")
     public void publishPendingEvents(){
-        outboxPublisherService.publishPendingEvent();
+        outboxPublisherService.publishPendingEvents();
     }
 
 }

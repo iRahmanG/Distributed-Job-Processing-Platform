@@ -6,5 +6,6 @@ public enum JobStatus {
     PROCESSING,   // Worker picked the job
     COMPLETED,    // Success
     FAILED,       // Permanent failure
-    RETRYING      // Waiting for retry
+    RETRYING,     // Waiting for retry
+    DEAD_LETTER   // Move to Dead Letter Queue
 }
