@@ -24,6 +24,7 @@ public class WorkerServiceImpl implements WorkerService{
     private final JobRepository jobRepository;
     private final JobPayloadRepository payloadRepository;
     private final JobExecutor jobExecutor;
+    private final JobExecutionService jobExecutionService;
 
     @Override
     @Transactional
@@ -57,10 +58,27 @@ public class WorkerServiceImpl implements WorkerService{
                 return;
             }
 
+            boolean executionClaimed =
+                    jobExecutionService.claimExecution(
+                            job.getJobId(),
+                            event.eventId()
+                    );
+
+            if (!executionClaimed) {
+                log.info(
+                        "Duplicate Kafka event ignored. eventId={}, jobId={}",
+                        event.eventId(),
+                        job.getJobId()
+                );
+                return;
+            }
+
             jobExecutor.execute(
                     job.getJobType(),
                     payload.getPayload()
             );
+
+            jobExecutionService.markCompleted(event.eventId());
 
             jobRepository.updateStatus(
                     job.getJobId(),
@@ -68,6 +86,12 @@ public class WorkerServiceImpl implements WorkerService{
                     LocalDateTime.now()
             );
         } catch (Exception e) {
+
+            jobExecutionService.markFailed(
+                    event.eventId(),
+                    e.getMessage()
+            );
+
             jobRepository.updateExecutionResult(
                     job.getJobId(),
                     JobStatus.RETRYING,

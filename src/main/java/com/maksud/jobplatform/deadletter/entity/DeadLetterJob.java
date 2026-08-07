@@ -1,11 +1,9 @@
 package com.maksud.jobplatform.deadletter.entity;
 
-import com.maksud.jobplatform.job.entity.JobPayload;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -20,16 +18,18 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class DeadLetterJob {
+
     @Id
+    @Column(length = 26)
     private String id;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 26)
     private String jobId;
 
     @Column(nullable = false, length = 50)
     private String jobType;
 
-    @Column(columnDefinition = "jsonb", nullable = false)
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String payload;
 
     @Column(columnDefinition = "TEXT")
@@ -38,8 +38,9 @@ public class DeadLetterJob {
     @Column(nullable = false)
     private LocalDateTime failedAt;
 
+    @Column(nullable = false)
     private int retryCount;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String stackTrace;
 }
