@@ -8,13 +8,21 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 public interface JobExecutionRepository extends JpaRepository<JobExecution, String> {
 
     Optional<JobExecution> findByEventId(String eventId);
 
-    boolean existByEventId(String eventId);
+    boolean existsByEventId(String eventId);
+
+    List<JobExecution> findByJobIdOrderByStartedAtDesc(String jobId);
+
+    Optional<JobExecution> findByIdAndJobId(
+            String executionId,
+            String jobId
+    );
 
     @Modifying
     @Query("""

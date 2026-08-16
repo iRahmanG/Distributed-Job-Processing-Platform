@@ -30,6 +30,8 @@ public class WorkerServiceImpl implements WorkerService{
     @Transactional
     public void processJob(String message) {
 
+        log.info("Received Kafka job event: {}", message);
+
         JobCreatedEvent event;
         try {
             event = objectMapper.readValue(message, JobCreatedEvent.class);
@@ -46,18 +48,6 @@ public class WorkerServiceImpl implements WorkerService{
                         new IllegalArgumentException("Payload not found for job : " + job.getJobId()));
 
         try {
-            // Atomic Job Claim
-            int claimed = jobRepository.claimJob(
-                    job.getJobId(),
-                    JobStatus.QUEUED,
-                    JobStatus.PROCESSING,
-                    LocalDateTime.now()
-            );
-
-            if(claimed == 0){
-                return;
-            }
-
             boolean executionClaimed =
                     jobExecutionService.claimExecution(
                             job.getJobId(),
@@ -70,6 +60,18 @@ public class WorkerServiceImpl implements WorkerService{
                         event.eventId(),
                         job.getJobId()
                 );
+                return;
+            }
+
+            // Atomic Job Claim
+            int claimed = jobRepository.claimJob(
+                    job.getJobId(),
+                    JobStatus.QUEUED,
+                    JobStatus.PROCESSING,
+                    LocalDateTime.now()
+            );
+
+            if(claimed == 0){
                 return;
             }
 
