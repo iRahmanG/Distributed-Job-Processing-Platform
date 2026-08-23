@@ -166,29 +166,25 @@ sequenceDiagram
 # 5. Job Lifecycle
 
 The job lifecycle is designed around explicit state transitions.
-
-```mermaid
+``` mermaid
 stateDiagram-v2
+    direction LR
 
     [*] --> CREATED
-
     CREATED --> QUEUED
-
     QUEUED --> PROCESSING
 
     PROCESSING --> COMPLETED
-
     PROCESSING --> FAILED
 
     FAILED --> RETRYING
-
     RETRYING --> QUEUED
-
     RETRYING --> DEAD
 
+    COMPLETED --> [*]
     DEAD --> [*]
 
-    COMPLETED --> [*]
+
 ```
 
 The exact transition rules are controlled by the JobLifecycleService.
@@ -224,13 +220,13 @@ This allows the system to maintain execution history instead of overwriting info
 
 Responsible for:
 
-Accepting job creation requests
-Validating job information
-Persisting jobs
-Persisting job payloads
-Creating outbox events
-Providing job query APIs
-Maintaining job lifecycle rules
+- Accepting job creation requests
+- Validating job information
+- Persisting jobs
+- Persisting job payloads
+- Creating outbox events
+- Providing job query APIs
+- Maintaining job lifecycle rules
 
 ## PostgreSQL
 
@@ -238,11 +234,11 @@ PostgreSQL acts as the source of truth for the platform.
 
 Important data stored in PostgreSQL includes:
 
-Jobs
-Job payloads
-Job executions
-Execution history
-Outbox events
+- Jobs
+- Job payloads
+- Job executions
+- Execution history
+- Outbox events
 
 The database is intentionally treated as the primary source of truth instead of relying only on Kafka.
 
@@ -429,167 +425,89 @@ The retry scheduler looks for jobs whose retry time has arrived and makes them a
 The Dead Letter Queue is intended for jobs that cannot be successfully processed after the configured retry limit.
 
 Conceptually:
-```
-flowchart TD
+``` mermaid
+flowchart LR
 
-    Processing["Processing"]
-
-    Processing --> Success["Success"]
+    Processing["Processing"] --> Success["Success"]
     Processing --> Failure["Failure"]
 
-    Failure --> Retry["Retry"]
-
-    Retry --> Processing
-
+    Failure --> Retry["Retry"] --> Processing
     Retry --> Limit{"Retry Limit Reached?"}
 
     Limit -->|No| Processing
-    Limit -->|Yes| DLQ["Dead Letter Queue"]
-
-    DLQ --> Manual["Manual Investigation"]
+    Limit -->|Yes| DLQ["Dead Letter Queue"] --> Manual["Manual Investigation"]
 ```
 The DLQ allows permanently failed jobs to be retained instead of silently losing them.
 
 # 17. Features Implemented
-## Job Management
- [x] Job creation API
- [x] Job persistence
- [x] Job payload persistence
- [x] Job status management
- [x] Job priority
- [x] Retry count tracking
- [x] Next retry time tracking
- [x] Job query APIs
-## Event-Driven Processing
- [x] Kafka integration
- [x] Kafka producer
- [x] Kafka consumer
- [x] Job-created events
- [x] Consumer group based worker processing
- [x] Asynchronous job execution
-## Reliability
- [x] PostgreSQL as source of truth
- [x] Transactional job creation
- [x] Transactional Outbox Pattern
- [x] Outbox event persistence
- [x] Outbox event publishing
- [x] Duplicate event detection
- [x] Execution tracking
- [x] Worker identification
- [x] Job claiming using conditional update
-## Execution Management
- [x] Job execution records
- [x] Execution status
- [x] Execution start time
- [x] Execution completion time
- [x] Error message storage
- [x] Execution history
- [x] Execution detail API
-## Retry Handling
- [x] Retry count
- [x] Retry scheduling information
- [x] Retry scheduler
- [x] Retry state
- [x] Failure recording
-## Infrastructure
- [x] Docker setup
- [x] Docker Compose
- [x] PostgreSQL container
- [x] Kafka container
- [x] Kafka UI
- [x] Local development environment
+
+| **Job Management**              | **Event-Driven Processing**       | **Reliability**                   |
+|---------------------------------|-----------------------------------|-----------------------------------|
+| ✔️ Job creation API              | ✔️ Kafka integration              | ✔️ PostgreSQL as source of truth  |
+| ✔️ Job persistence               | ✔️ Kafka producer                 | ✔️ Transactional job creation     |
+| ✔️ Job payload persistence       | ✔️ Kafka consumer                 | ✔️ Transactional Outbox Pattern   |
+| ✔️ Job status management         | ✔️ Job-created events             | ✔️ Outbox event persistence       |
+| ✔️ Job priority                  | ✔️ Consumer group worker processing | ✔️ Outbox event publishing        |
+| ✔️ Retry count tracking          | ✔️ Asynchronous job execution     | ✔️ Duplicate event detection      |
+| ✔️ Next retry time tracking      |                                   | ✔️ Execution tracking             |
+| ✔️ Job query APIs                |                                   | ✔️ Worker identification          |
+|                                   |                                   | ✔️ Job claiming via conditional update |
+
+| **Execution Management**         | **Retry Handling**                 | **Infrastructure**                 |
+|----------------------------------|-------------------------------------|-----------------------------------|
+| ✔️ Job execution records         | ✔️ Retry count                     | ✔️ Docker setup                   |
+| ✔️ Execution status              | ✔️ Retry scheduling information    | ✔️ Docker Compose                 |
+| ✔️ Execution start time          | ✔️ Retry scheduler                 | ✔️ PostgreSQL container           |
+| ✔️ Execution completion time     | ✔️ Retry state                     | ✔️ Kafka container                |
+| ✔️ Error message storage         | ✔️ Failure recording               | ✔️ Kafka UI                       |
+| ✔️ Execution history             |                                    | ✔️ Local development environment  |
+| ✔️ Execution detail API          |                                    |                                    |
+
+
 
 # 18. Features Currently Being Worked On
 
-The following areas are still under development or require further testing:
+| **In Progress**                  | **Testing**                      | **Failure Handling**              |
+|----------------------------------|----------------------------------|-----------------------------------|
+| ✔️ Finalize job lifecycle transitions | ✔️ Complete retry flow testing   | ✔️ Dead Letter Queue integration  |
+| ✔️ Finalize retry state transitions | ✔️ End-to-end failure testing    | ✔️ Failed job recovery            |
+| ✔️ Concurrent worker testing      | ✔️ Retry limit enforcement        | ✔️ Better Kafka error handling    |
+| ✔️ Manual DLQ processing          |                                  | ✔️ Better worker failure handling |
 
- Finalize job lifecycle transitions
- Finalize retry state transitions
- Complete retry flow testing
- Dead Letter Queue integration
- Failed job recovery
- Better Kafka error handling
- Better worker failure handling
- End-to-end failure testing
- Concurrent worker testing
- Retry limit enforcement
- Manual DLQ processing
- 
+---
+
 # 19. Features Yet to Implement
-## Reliability
- Better transactional boundaries
- Improved failure recovery
- Worker crash recovery
- Stuck execution detection
- Job timeout handling
- Execution heartbeat
- Graceful worker shutdown
-## Kafka
- Production-ready retry topics
- Dead Letter Topic
- Better partitioning strategy
- Consumer lag monitoring
- Kafka message headers for retry metadata
- Improved producer error handling
- Kafka security configuration
-## Job Processing
- Multiple job types
- Job timeout configuration
- Job cancellation
- Job pause/resume
- Scheduled jobs
- Delayed jobs
- Job dependency support
-## Retry System
- Configurable maximum retries
- Exponential backoff
- Fixed backoff configuration
- Retry policies per job type
- Retry history
- Manual retry
- Retry monitoring
-## Dead Letter Queue
- DLQ topic
- DLQ database tracking
- Failed job inspection
- Manual replay
- Manual discard
- DLQ monitoring
-## Security
- Authentication
- Authorization
- Role-based access control
- API security
- Kafka authentication
- Database credential management
-## Observability
- Structured logging
- Correlation IDs
- Distributed tracing
- Metrics
- Prometheus
- Grafana
- Kafka consumer metrics
- Job processing metrics
-## Testing
- Unit tests
- Repository tests
- Service tests
- Kafka integration tests
- End-to-end tests
- Concurrent worker tests
- Failure scenario tests
- Retry scenario tests
- DLQ tests
- Testcontainers integration
-## Deployment
- Production Docker images
- Kubernetes deployment
- Kubernetes ConfigMaps
- Kubernetes Secrets
- Horizontal worker scaling
- Health checks
- Readiness probes
- Liveness probes
- CI/CD pipeline
+
+| **Reliability**                  | **Kafka**                        | **Job Processing**                |
+|----------------------------------|----------------------------------|-----------------------------------|
+| ⬜ Better transactional boundaries | ⬜ Production-ready retry topics  | ⬜ Multiple job types              |
+| ⬜ Improved failure recovery      | ⬜ Dead Letter Topic              | ⬜ Job timeout configuration       |
+| ⬜ Worker crash recovery          | ⬜ Better partitioning strategy   | ⬜ Job cancellation                |
+| ⬜ Stuck execution detection      | ⬜ Consumer lag monitoring        | ⬜ Job pause/resume                |
+| ⬜ Job timeout handling           | ⬜ Retry metadata headers         | ⬜ Scheduled jobs                  |
+| ⬜ Execution heartbeat            | ⬜ Improved producer error handling | ⬜ Delayed jobs                   |
+| ⬜ Graceful worker shutdown       | ⬜ Kafka security configuration   | ⬜ Job dependency support          |
+
+| **Retry System**                 | **Dead Letter Queue**            | **Security**                      |
+|----------------------------------|----------------------------------|-----------------------------------|
+| ⬜ Configurable maximum retries   | ⬜ DLQ topic                      | ⬜ Authentication                  |
+| ⬜ Exponential backoff            | ⬜ DLQ database tracking          | ⬜ Authorization                   |
+| ⬜ Fixed backoff configuration    | ⬜ Failed job inspection          | ⬜ Role-based access control       |
+| ⬜ Retry policies per job type    | ⬜ Manual replay                  | ⬜ API security                    |
+| ⬜ Retry history                  | ⬜ Manual discard                 | ⬜ Kafka authentication            |
+| ⬜ Manual retry                   | ⬜ DLQ monitoring                 | ⬜ Database credential management  |
+| ⬜ Retry monitoring               |                                  |                                   |
+
+| **Observability**                | **Testing**                      | **Deployment**                    |
+|----------------------------------|----------------------------------|-----------------------------------|
+| ⬜ Structured logging             | ⬜ Unit tests                     | ⬜ Production Docker images        |
+| ⬜ Correlation IDs                | ⬜ Repository tests               | ⬜ Kubernetes deployment           |
+| ⬜ Distributed tracing            | ⬜ Service tests                  | ⬜ Kubernetes ConfigMaps           |
+| ⬜ Metrics                        | ⬜ Kafka integration tests        | ⬜ Kubernetes Secrets              |
+| ⬜ Prometheus                     | ⬜ End-to-end tests               | ⬜ Horizontal worker scaling       |
+| ⬜ Grafana                        | ⬜ Concurrent worker tests        | ⬜ Health checks                   |
+| ⬜ Kafka consumer metrics         | ⬜ Failure scenario tests          | ⬜ Readiness probes                |
+| ⬜ Job processing metrics         | ⬜ Retry scenario tests            | ⬜ Liveness probes                 |
+|                                  | ⬜ DLQ tests                      | ⬜ CI/CD pipeline                  |
+|                                  | ⬜ Testcontainers integration     |                                   |
 
