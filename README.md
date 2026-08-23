@@ -439,7 +439,7 @@ flowchart LR
 ```
 The DLQ allows permanently failed jobs to be retained instead of silently losing them.
 
-# 17. Features Implemented
+# 14. Features Implemented
 
 | **Job Management**              | **Event-Driven Processing**       | **Reliability**                   |
 |---------------------------------|-----------------------------------|-----------------------------------|
@@ -465,7 +465,7 @@ The DLQ allows permanently failed jobs to be retained instead of silently losing
 
 
 
-# 18. Features Currently Being Worked On
+# 15. Features Currently Being Worked On
 
 | **In Progress**                  | **Testing**                      | **Failure Handling**              |
 |----------------------------------|----------------------------------|-----------------------------------|
@@ -476,7 +476,7 @@ The DLQ allows permanently failed jobs to be retained instead of silently losing
 
 ---
 
-# 19. Features Yet to Implement
+# 16. Features Yet to Implement
 
 | **Reliability**                  | **Kafka**                        | **Job Processing**                |
 |----------------------------------|----------------------------------|-----------------------------------|
@@ -511,3 +511,82 @@ The DLQ allows permanently failed jobs to be retained instead of silently losing
 |                                  | ⬜ DLQ tests                      | ⬜ CI/CD pipeline                  |
 |                                  | ⬜ Testcontainers integration     |                                   |
 
+
+# 17. Important Distributed System Problems Being Solved
+
+This project is being used to understand real backend engineering problems rather than only framework features.
+
+## Problem 1: What if the database succeeds but Kafka fails?
+
+**Solution: Outbox Pattern**
+
+```mermaid
+flowchart LR
+    Job --> OutboxEvent --> Transaction --> COMMIT --> Publisher --> Kafka
+``` 
+
+## Problem 2: What if Kafka delivers the same event twice?
+
+**Solution: Deduplication with Unique Constraint**
+``` mermaid
+flowchart LR
+    EventId --> Constraint["Unique Constraint"] --> Duplicate["Duplicate Event"] --> Ignore
+``` 
+## Problem 3: What if two workers receive the same job?
+
+**Solution: Conditional Job Claim**
+``` mermaid
+flowchart LR
+    WorkerA --> Claim["Conditional Job Claim"]
+    WorkerB --> Claim
+    Claim --> Success["Only one succeeds"]
+```
+## Problem 4: What if job execution fails?
+ 
+**Solution: Retry Flow**
+``` mermaid
+flowchart LR
+    FAILED --> RETRYING --> Scheduler["Retry Scheduler"] --> QUEUED
+```
+
+## Problem 5: What if the job keeps failing?
+
+**Solution: Dead Letter Queue (DLQ)**
+``` mermaid
+flowchart LR
+    Retry1 --> Retry2 --> Retry3 --> Limit["Maximum Retry Count"] --> DLQ["Dead Letter Queue"]
+```
+# 18. Design Principles
+
+The project follows these principles wherever practical:
+
+| **Principle**                  | **Description** |
+|--------------------------------|-----------------|
+| **Single Responsibility**      | Services are separated based on their responsibilities. |
+| **Database as Source of Truth**| Important job state is persisted in PostgreSQL. |
+| **Idempotency**                | The system safely handles duplicate events. |
+| **Explicit State Transitions** | Job states cannot be changed arbitrarily. |
+| **Failure Should Be Visible**  | Failures are recorded rather than silently ignored. |
+| **Asynchronous Processing**    | Long-running job execution should not block API requests. |
+| **Loose Coupling**             | Kafka is used to decouple job creation from job processing. |
+| **Observability**              | Execution history and error information are stored for investigation. |
+
+# 19. Learning Outcomes
+
+By completing this project, I aim to gain practical understanding of:
+
+| **Area**                          | **Learning Outcome** |
+|-----------------------------------|-----------------------|
+| Distributed Job Queues            | How distributed job queues work |
+| Kafka in Backend Systems          | How Kafka is used in real backend systems |
+| Asynchronous Task Processing      | How workers process asynchronous tasks |
+| Idempotency                       | Why idempotency is important |
+| Transactional Outbox              | How transactional outbox solves dual-write problems |
+| Database Coordination             | How databases help coordinate distributed workers |
+| Retry Design                      | How retries should be designed |
+| Dead Letter Queues                | How Dead Letter Queues are used |
+| Execution History                 | How job execution history is maintained |
+| Failure Handling                  | How failures are handled in distributed systems |
+| Explicit State Machines           | How to design explicit state machines |
+| Concurrency                       | How to reason about concurrency |
+| Production-Ready Spring Boot      | How to build production-oriented Spring Boot systems |
