@@ -6,101 +6,157 @@ import com.maksud.jobplatform.job.entity.JobPayload;
 import com.maksud.jobplatform.job.entity.enums.JobStatus;
 import com.maksud.jobplatform.job.repository.JobPayloadRepository;
 import com.maksud.jobplatform.job.repository.JobRepository;
+import com.maksud.jobplatform.job.service.JobLifecycleService;
 import com.maksud.jobplatform.outbox.dto.JobCreatedEvent;
 import com.maksud.jobplatform.worker.executer.JobExecutor;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
-
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class WorkerServiceImpl implements WorkerService{
+public class WorkerServiceImpl implements WorkerService {
 
     private final ObjectMapper objectMapper;
     private final JobRepository jobRepository;
     private final JobPayloadRepository payloadRepository;
     private final JobExecutor jobExecutor;
     private final JobExecutionService jobExecutionService;
+    private final JobLifecycleService jobLifecycleService;
 
     @Override
-    @Transactional
     public void processJob(String message) {
 
         log.info("Received Kafka job event: {}", message);
 
         JobCreatedEvent event;
+
         try {
-            event = objectMapper.readValue(message, JobCreatedEvent.class);
+            event = objectMapper.readValue(
+                    message,
+                    JobCreatedEvent.class
+            );
         } catch (Exception e) {
-            throw new RuntimeException("Invalid Kafka message", e);
+            throw new RuntimeException(
+                    "Invalid Kafka message",
+                    e
+            );
+        }
+
+        // Ignore duplicate Kafka events
+        if (jobExecutionService.executionExists(event.eventId())) {
+
+            log.info(
+                    "Duplicate Kafka event ignored. eventId={}, jobId={}",
+                    event.eventId(),
+                    event.jobId()
+            );
+
+            return;
         }
 
         Job job = jobRepository.findById(event.jobId())
                 .orElseThrow(() ->
-                        new IllegalArgumentException("Job not found : " + event.jobId()));
+                        new IllegalArgumentException(
+                                "Job not found : " + event.jobId()
+                        )
+                );
 
         JobPayload payload = payloadRepository.findByJob(job)
                 .orElseThrow(() ->
-                        new IllegalArgumentException("Payload not found for job : " + job.getJobId()));
+                        new IllegalArgumentException(
+                                "Payload not found for job : "
+                                        + job.getJobId()
+                        )
+                );
 
-        try {
-            boolean executionClaimed =
-                    jobExecutionService.claimExecution(
-                            job.getJobId(),
-                            event.eventId()
-                    );
-
-            if (!executionClaimed) {
-                log.info(
-                        "Duplicate Kafka event ignored. eventId={}, jobId={}",
-                        event.eventId(),
+        // Try to claim the job
+        boolean jobClaimed =
+                jobLifecycleService.claimQueuedJob(
                         job.getJobId()
                 );
-                return;
-            }
 
-            // Atomic Job Claim
-            int claimed = jobRepository.claimJob(
+        if (!jobClaimed) {
+
+            log.info(
+                    "Job could not be claimed. jobId={}, currentStatus={}",
                     job.getJobId(),
-                    JobStatus.QUEUED,
-                    JobStatus.PROCESSING,
-                    LocalDateTime.now()
+                    job.getStatus()
             );
 
-            if(claimed == 0){
-                return;
-            }
+            return;
+        }
+
+        // Reload after the bulk update
+        Job processingJob = jobRepository.findById(event.jobId())
+                .orElseThrow(() ->
+                        new IllegalArgumentException(
+                                "Job not found after claim : "
+                                        + event.jobId()
+                        )
+                );
+
+        boolean executionClaimed =
+                jobExecutionService.claimExecution(
+                        processingJob.getJobId(),
+                        event.eventId()
+                );
+
+        if (!executionClaimed) {
+
+            log.info(
+                    "Execution already exists. eventId={}, jobId={}",
+                    event.eventId(),
+                    event.jobId()
+            );
+
+            return;
+        }
+
+        try {
 
             jobExecutor.execute(
-                    job.getJobType(),
+                    processingJob.getJobType(),
                     payload.getPayload()
             );
 
-            jobExecutionService.markCompleted(event.eventId());
-
-            jobRepository.updateStatus(
-                    job.getJobId(),
-                    JobStatus.COMPLETED,
-                    LocalDateTime.now()
+            jobExecutionService.markCompleted(
+                    event.eventId()
             );
+
+            jobLifecycleService.transition(
+                    processingJob.getJobId(),
+                    JobStatus.COMPLETED
+            );
+
+            log.info(
+                    "Job completed successfully. jobId={}, eventId={}",
+                    processingJob.getJobId(),
+                    event.eventId()
+            );
+
         } catch (Exception e) {
+
+            log.error(
+                    "Failed processing job {}",
+                    processingJob.getJobId(),
+                    e
+            );
 
             jobExecutionService.markFailed(
                     event.eventId(),
                     e.getMessage()
             );
 
-            jobRepository.updateExecutionResult(
-                    job.getJobId(),
-                    JobStatus.RETRYING,
-                    job.getRetryCount() + 1,
-                    LocalDateTime.now()
+            jobLifecycleService.markRetry(
+                    processingJob.getJobId()
             );
-            log.error("Failed processing job {}", job.getJobId(), e);
+
+            log.info(
+                    "Job scheduled for retry. jobId={}",
+                    processingJob.getJobId()
+            );
         }
     }
 }

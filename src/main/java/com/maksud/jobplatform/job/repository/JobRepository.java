@@ -59,15 +59,17 @@ public interface JobRepository extends JpaRepository<Job, String> {
 
     @Modifying
     @Query("""
-            UPDATE Job j
-            SET j.status = :status,
-                j.retryCount = :retryCount,
-                j.nextRetryAt = :nextRetryAt,
-                j.updatedAt = :updatedAt
-            WHERE j.jobId = :jobId
-            """)
+        UPDATE Job j
+        SET j.status = :status,
+            j.retryCount = :retryCount,
+            j.nextRetryAt = :nextRetryAt,
+            j.updatedAt = :updatedAt
+        WHERE j.jobId = :jobId
+          AND j.status = :currentStatus
+        """)
     int updateRetryState(
             @Param("jobId") String jobId,
+            @Param("currentStatus") JobStatus currentStatus,
             @Param("status") JobStatus status,
             @Param("retryCount") int retryCount,
             @Param("nextRetryAt") LocalDateTime nextRetryAt,

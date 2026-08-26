@@ -21,6 +21,7 @@ import java.util.List;
 @RequiredArgsConstructor
 @Slf4j
 public class RetryScheduler {
+
     private final JobRepository jobRepository;
     private final JobPayloadRepository jobPayloadRepository;
     private final DeadLetterService deadLetterService;
@@ -28,50 +29,68 @@ public class RetryScheduler {
 
     @Value("${job-platform.retry.max-attempts}")
     private int maxAttempts;
-
-
     @Scheduled(fixedDelayString = "${job-platform.retry.interval-ms}")
     @Transactional
     public void retryFailedJob() {
 
-        List<Job> jobs = jobRepository.findTop100ByStatusOrderByUpdatedAtAsc(
-                JobStatus.RETRYING
-        );
+        LocalDateTime now = LocalDateTime.now();
 
-        for(Job job: jobs) {
+        List<Job> jobs =
+                jobRepository
+                        .findTop100ByStatusAndNextRetryAtLessThanEqualOrderByNextRetryAtAsc(
+                                JobStatus.RETRYING,
+                                now
+                        );
 
-            //Retry limit exceeded
-            if(job.getRetryCount() >= maxAttempts){
-                JobPayload payload = jobPayloadRepository.findByJob(job)
-                        .orElseThrow(() -> new IllegalArgumentException(
-                                "Payload not found for job " + job.getJobId()
-                        ));
+        for (Job job : jobs) {
+
+            if (job.getRetryCount() >= maxAttempts) {
+
+                JobPayload payload =
+                        jobPayloadRepository.findByJob(job)
+                                .orElseThrow(() ->
+                                        new IllegalArgumentException(
+                                                "Payload not found for job "
+                                                        + job.getJobId()
+                                        )
+                                );
 
                 deadLetterService.moveToDeadLetter(
                         job,
                         payload.getPayload(),
-                        new RuntimeException("Maximum retry attempts exceeded")
+                        new RuntimeException(
+                                "Maximum retry attempts exceeded"
+                        )
                 );
 
                 jobRepository.updateStatus(
                         job.getJobId(),
                         JobStatus.DEAD_LETTER,
-                        LocalDateTime.now()
+                        now
                 );
-                log.warn("Job {} moved to DLQ", job.getJobId());
+
+                log.warn(
+                        "Job {} moved to DLQ after {} attempts",
+                        job.getJobId(),
+                        job.getRetryCount()
+                );
+
+                continue;
             }
 
-            // Requeue job
             jobRepository.updateStatus(
                     job.getJobId(),
                     JobStatus.QUEUED,
-                    LocalDateTime.now()
+                    now
             );
 
             outboxService.createJobCreatedEvent(job);
 
-            log.info("Job {} scheduled for retry {}", job.getJobId(), job.getRetryCount());
+            log.info(
+                    "Job {} requeued for retry. attempt={}",
+                    job.getJobId(),
+                    job.getRetryCount() + 1
+            );
         }
-
     }
 }
