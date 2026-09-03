@@ -29,9 +29,16 @@ public class DeadLetterServiceImpl implements DeadLetterService{
     private final OutboxService outboxService;
 
     @Override
-    public void moveToDeadLetter(Job job, String payload, Exception exception) {
+    @Transactional
+    public void moveToDeadLetter(
+            Job job,
+            String payload,
+            Exception exception
+    ) {
         StringWriter sw = new StringWriter();
         exception.printStackTrace(new PrintWriter(sw));
+
+        LocalDateTime now = LocalDateTime.now();
 
         DeadLetterJob dlq = new DeadLetterJob();
 
@@ -41,12 +48,30 @@ public class DeadLetterServiceImpl implements DeadLetterService{
         dlq.setPayload(payload);
         dlq.setReason(exception.getMessage());
         dlq.setRetryCount(job.getRetryCount());
-        dlq.setFailedAt(LocalDateTime.now());
+        dlq.setFailedAt(now);
         dlq.setStackTrace(sw.toString());
 
         deadLetterRepository.save(dlq);
 
-        log.error("Failed job saved in dlq {}", job);
+        int updated = jobRepository.markDeadLetter(
+                job.getJobId(),
+                JobStatus.RETRYING,
+                JobStatus.DEAD_LETTER,
+                now
+        );
+
+        if (updated != 1) {
+            throw new IllegalStateException(
+                    "Unable to move job to DEAD_LETTER: "
+                            + job.getJobId()
+            );
+        }
+
+        log.error(
+                "Job {} moved to DLQ after {} retries",
+                job.getJobId(),
+                job.getRetryCount()
+        );
     }
 
     @Override

@@ -65,12 +65,6 @@ public class RetryScheduler {
                         )
                 );
 
-                jobRepository.updateStatus(
-                        job.getJobId(),
-                        JobStatus.DEAD_LETTER,
-                        now
-                );
-
                 log.warn(
                         "Job {} moved to DLQ after {} attempts",
                         job.getJobId(),
