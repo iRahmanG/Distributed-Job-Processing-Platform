@@ -22,34 +22,6 @@ public class JobLifecycleServiceImpl implements JobLifecycleService {
 
     @Override
     @Transactional
-    public void transition(String jobId, JobStatus targetStatus) {
-
-        Job job = jobRepository.findById(jobId)
-                .orElseThrow(() ->
-                        new IllegalArgumentException(
-                                "Job not found : " + jobId
-                        )
-                );
-
-        JobStatus currentStatus = job.getStatus();
-
-        if (!isValidTransition(currentStatus, targetStatus)) {
-            throw new InvalidJobStatusTransitionException(
-                    "Invalid job status transition: "
-                            + currentStatus
-                            + " -> "
-                            + targetStatus
-            );
-        }
-
-        job.setStatus(targetStatus);
-        job.setUpdatedAt(LocalDateTime.now());
-
-        jobRepository.save(job);
-    }
-
-    @Override
-    @Transactional
     public boolean claimQueuedJob(String jobId) {
 
         int updated = jobRepository.claimJob(
@@ -89,7 +61,7 @@ public class JobLifecycleServiceImpl implements JobLifecycleService {
         LocalDateTime nextRetryAt =
                 now.plusSeconds(retryDelaySeconds);
 
-        int updated = jobRepository.updateRetryState(
+        int updated = jobRepository.markJobForRetry(
                 jobId,
                 JobStatus.PROCESSING,
                 JobStatus.RETRYING,
@@ -133,5 +105,22 @@ public class JobLifecycleServiceImpl implements JobLifecycleService {
 
             case COMPLETED, DEAD_LETTER -> false;
         };
+    }
+    @Override
+    @Transactional
+    public void completeJob(String jobId) {
+
+        int updated = jobRepository.completeJob(
+                jobId,
+                JobStatus.PROCESSING,
+                JobStatus.COMPLETED,
+                LocalDateTime.now()
+        );
+
+        if (updated != 1) {
+            throw new InvalidJobStatusTransitionException(
+                    "Unable to transition job to COMPLETED: " + jobId
+            );
+        }
     }
 }

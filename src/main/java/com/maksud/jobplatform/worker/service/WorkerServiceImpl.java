@@ -3,7 +3,6 @@ package com.maksud.jobplatform.worker.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.maksud.jobplatform.job.entity.Job;
 import com.maksud.jobplatform.job.entity.JobPayload;
-import com.maksud.jobplatform.job.entity.enums.JobStatus;
 import com.maksud.jobplatform.job.repository.JobPayloadRepository;
 import com.maksud.jobplatform.job.repository.JobRepository;
 import com.maksud.jobplatform.job.service.JobLifecycleService;
@@ -125,9 +124,8 @@ public class WorkerServiceImpl implements WorkerService {
                     event.eventId()
             );
 
-            jobLifecycleService.transition(
-                    processingJob.getJobId(),
-                    JobStatus.COMPLETED
+            jobLifecycleService.completeJob(
+                    processingJob.getJobId()
             );
 
             log.info(

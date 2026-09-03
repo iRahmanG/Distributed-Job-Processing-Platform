@@ -94,4 +94,38 @@ public interface JobRepository extends JpaRepository<Job, String> {
     );
 
     List<Job> findTop100ByStatusOrderByUpdatedAtAsc(JobStatus status);
+
+    @Modifying
+    @Query("""
+        UPDATE Job j
+        SET j.status = :completedStatus,
+            j.updatedAt = :updatedAt
+        WHERE j.jobId = :jobId
+          AND j.status = :processingStatus
+        """)
+    int completeJob(
+            @Param("jobId") String jobId,
+            @Param("processingStatus") JobStatus processingStatus,
+            @Param("completedStatus") JobStatus completedStatus,
+            @Param("updatedAt") LocalDateTime updatedAt
+    );
+
+    @Modifying
+    @Query("""
+        UPDATE Job j
+        SET j.status = :retryingStatus,
+            j.retryCount = :retryCount,
+            j.nextRetryAt = :nextRetryAt,
+            j.updatedAt = :updatedAt
+        WHERE j.jobId = :jobId
+          AND j.status = :processingStatus
+        """)
+    int markJobForRetry(
+            @Param("jobId") String jobId,
+            @Param("processingStatus") JobStatus processingStatus,
+            @Param("retryingStatus") JobStatus retryingStatus,
+            @Param("retryCount") int retryCount,
+            @Param("nextRetryAt") LocalDateTime nextRetryAt,
+            @Param("updatedAt") LocalDateTime updatedAt
+    );
 }
