@@ -6,6 +6,7 @@ import com.maksud.jobplatform.job.entity.JobPayload;
 import com.maksud.jobplatform.job.entity.enums.JobStatus;
 import com.maksud.jobplatform.job.repository.JobPayloadRepository;
 import com.maksud.jobplatform.job.repository.JobRepository;
+import com.maksud.jobplatform.job.service.JobLifecycleService;
 import com.maksud.jobplatform.outbox.service.OutboxService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +27,7 @@ public class RetryScheduler {
     private final JobPayloadRepository jobPayloadRepository;
     private final DeadLetterService deadLetterService;
     private final OutboxService outboxService;
+    private final JobLifecycleService jobLifecycleService;
 
     @Value("${job-platform.retry.max-attempts}")
     private int maxAttempts;
@@ -78,11 +80,15 @@ public class RetryScheduler {
                 continue;
             }
 
-            jobRepository.updateStatus(
-                    job.getJobId(),
-                    JobStatus.QUEUED,
-                    now
-            );
+            boolean requeued =
+                    jobLifecycleService.requeueRetryingJob(
+                            job.getJobId(),
+                            now
+                    );
+
+            if (!requeued) {
+                continue;
+            }
 
             outboxService.createJobCreatedEvent(job);
 

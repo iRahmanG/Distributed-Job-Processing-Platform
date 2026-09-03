@@ -128,4 +128,21 @@ public interface JobRepository extends JpaRepository<Job, String> {
             @Param("nextRetryAt") LocalDateTime nextRetryAt,
             @Param("updatedAt") LocalDateTime updatedAt
     );
+
+    @Modifying
+    @Query("""
+    UPDATE Job j
+    SET j.status = :queuedStatus,
+        j.updatedAt = :updatedAt
+    WHERE j.jobId = :jobId
+      AND j.status = :retryingStatus
+      AND j.nextRetryAt <= :now
+    """)
+    int requeueRetryingJob(
+            @Param("jobId") String jobId,
+            @Param("retryingStatus") JobStatus retryingStatus,
+            @Param("queuedStatus") JobStatus queuedStatus,
+            @Param("now") LocalDateTime now,
+            @Param("updatedAt") LocalDateTime updatedAt
+    );
 }

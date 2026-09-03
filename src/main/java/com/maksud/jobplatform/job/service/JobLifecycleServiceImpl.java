@@ -123,4 +123,19 @@ public class JobLifecycleServiceImpl implements JobLifecycleService {
             );
         }
     }
+
+    @Override
+    @Transactional
+    public boolean requeueRetryingJob(String jobId, LocalDateTime now) {
+
+        int updated = jobRepository.requeueRetryingJob(
+                jobId,
+                JobStatus.RETRYING,
+                JobStatus.QUEUED,
+                now,
+                now
+        );
+
+        return updated == 1;
+    }
 }
