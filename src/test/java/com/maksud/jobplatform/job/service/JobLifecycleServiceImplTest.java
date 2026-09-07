@@ -12,6 +12,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -116,5 +117,137 @@ public class JobLifecycleServiceImplTest {
                 any(),
                 any()
         );
+    }
+
+    @Test
+    void shouldThrowExceptionWhenJobDoesNOtExist() {
+        when(jobRepository.findById("job-123"))
+                .thenReturn(Optional.empty());
+
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> jobLifecycleService.markRetry("job-123")
+        );
+
+        verify(jobRepository, never()).markJobForRetry(
+                any(),
+                any(),
+                any(),
+                anyInt(),
+                any(),
+                any()
+        );
+    }
+
+    @Test
+    void shouldThrowExceptionWhenRetryUpdateFails() {
+
+        Job job = Job.builder()
+                .jobId("job-123")
+                .status(JobStatus.PROCESSING)
+                .retryCount(1)
+                .build();
+
+        when(jobRepository.findById("job-123"))
+                .thenReturn(Optional.of(job));
+
+        when(jobRepository.markJobForRetry(
+                any(),
+                any(),
+                any(),
+                anyInt(),
+                any(),
+                any()
+        )).thenReturn(0);
+
+        assertThrows(
+                InvalidJobStatusTransitionException.class,
+                () -> jobLifecycleService.markRetry("job-123")
+        );
+    }
+
+    @Test
+    void shouldCompleteProcessingJob() {
+        when(jobRepository.completeJob(
+                any(),
+                any(),
+                any(),
+                any()
+        )).thenReturn(1);
+
+        jobLifecycleService.completeJob("job-123");
+
+        verify(jobRepository).completeJob(
+                eq("job-123"),
+                eq(JobStatus.PROCESSING),
+                eq(JobStatus.COMPLETED),
+                any()
+        );
+    }
+
+    @Test
+    void shouldThrowExceptionWhenCompletionUpdateFails() {
+
+        when(jobRepository.completeJob(
+                any(),
+                any(),
+                any(),
+                any()
+        )).thenReturn(0);
+
+        assertThrows(
+                InvalidJobStatusTransitionException.class,
+                () -> jobLifecycleService.completeJob("job-123")
+        );
+    }
+
+    @Test
+    void shouldRequeueRetryingJobSuccessfully() {
+
+        LocalDateTime now = LocalDateTime.now();
+        when(jobRepository.requeueRetryingJob(
+                any(),
+                any(),
+                any(),
+                any(),
+                any()
+        )).thenReturn(1);
+
+        boolean result =
+                jobLifecycleService.requeueRetryingJob(
+                        "job-123",
+                        now
+                );
+
+        assertTrue(result);
+
+        verify(jobRepository).requeueRetryingJob(
+                eq("job-123"),
+                eq(JobStatus.RETRYING),
+                eq(JobStatus.QUEUED),
+                eq(now),
+                eq(now)
+        );
+    }
+
+    @Test
+    void shouldReturnFalseWhenRequeueFails() {
+
+        LocalDateTime now = LocalDateTime.now();
+
+        when(jobRepository.requeueRetryingJob(
+                any(),
+                any(),
+                any(),
+                any(),
+                any()
+        )).thenReturn(0);
+
+        boolean result =
+                jobLifecycleService.requeueRetryingJob(
+                        "job-123",
+                        now
+                );
+        assertFalse(result);
     }
 }
