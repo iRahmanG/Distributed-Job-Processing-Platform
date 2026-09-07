@@ -78,34 +78,6 @@ public class JobLifecycleServiceImpl implements JobLifecycleService {
         }
     }
 
-    private boolean isValidTransition(
-            JobStatus currentStatus,
-            JobStatus targetStatus
-    ) {
-
-        return switch (currentStatus) {
-
-            case CREATED ->
-                    targetStatus == JobStatus.QUEUED;
-
-            case QUEUED ->
-                    targetStatus == JobStatus.PROCESSING;
-
-            case PROCESSING ->
-                    targetStatus == JobStatus.COMPLETED
-                            || targetStatus == JobStatus.FAILED
-                            || targetStatus == JobStatus.RETRYING;
-
-            case RETRYING ->
-                    targetStatus == JobStatus.QUEUED
-                            || targetStatus == JobStatus.DEAD_LETTER;
-
-            case FAILED ->
-                    targetStatus == JobStatus.DEAD_LETTER;
-
-            case COMPLETED, DEAD_LETTER -> false;
-        };
-    }
     @Override
     @Transactional
     public void completeJob(String jobId) {
