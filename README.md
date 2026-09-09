@@ -465,52 +465,27 @@ The DLQ allows permanently failed jobs to be retained instead of silently losing
 
 
 
-# 15. Features Currently Being Worked On
+# 15. V1 Status
 
-| **In Progress**                  | **Testing**                      | **Failure Handling**              |
-|----------------------------------|----------------------------------|-----------------------------------|
-| ✔️ Finalize job lifecycle transitions | ✔️ Complete retry flow testing   | ✔️ Dead Letter Queue integration  |
-| ✔️ Finalize retry state transitions | ✔️ End-to-end failure testing    | ✔️ Failed job recovery            |
-| ✔️ Concurrent worker testing      | ✔️ Retry limit enforcement        | ✔️ Better Kafka error handling    |
-| ✔️ Manual DLQ processing          |                                  | ✔️ Better worker failure handling |
+The core V1 implementation is complete and functional.
 
----
+The project currently demonstrates:
 
-# 16. Features Yet to Implement
-
-| **Reliability**                  | **Kafka**                        | **Job Processing**                |
-|----------------------------------|----------------------------------|-----------------------------------|
-| ⬜ Better transactional boundaries | ⬜ Production-ready retry topics  | ⬜ Multiple job types              |
-| ⬜ Improved failure recovery      | ⬜ Dead Letter Topic              | ⬜ Job timeout configuration       |
-| ⬜ Worker crash recovery          | ⬜ Better partitioning strategy   | ⬜ Job cancellation                |
-| ⬜ Stuck execution detection      | ⬜ Consumer lag monitoring        | ⬜ Job pause/resume                |
-| ⬜ Job timeout handling           | ⬜ Retry metadata headers         | ⬜ Scheduled jobs                  |
-| ⬜ Execution heartbeat            | ⬜ Improved producer error handling | ⬜ Delayed jobs                   |
-| ⬜ Graceful worker shutdown       | ⬜ Kafka security configuration   | ⬜ Job dependency support          |
-
-| **Retry System**                 | **Dead Letter Queue**            | **Security**                      |
-|----------------------------------|----------------------------------|-----------------------------------|
-| ⬜ Configurable maximum retries   | ⬜ DLQ topic                      | ⬜ Authentication                  |
-| ⬜ Exponential backoff            | ⬜ DLQ database tracking          | ⬜ Authorization                   |
-| ⬜ Fixed backoff configuration    | ⬜ Failed job inspection          | ⬜ Role-based access control       |
-| ⬜ Retry policies per job type    | ⬜ Manual replay                  | ⬜ API security                    |
-| ⬜ Retry history                  | ⬜ Manual discard                 | ⬜ Kafka authentication            |
-| ⬜ Manual retry                   | ⬜ DLQ monitoring                 | ⬜ Database credential management  |
-| ⬜ Retry monitoring               |                                  |                                   |
-
-| **Observability**                | **Testing**                      | **Deployment**                    |
-|----------------------------------|----------------------------------|-----------------------------------|
-| ⬜ Structured logging             | ⬜ Unit tests                     | ⬜ Production Docker images        |
-| ⬜ Correlation IDs                | ⬜ Repository tests               | ⬜ Kubernetes deployment           |
-| ⬜ Distributed tracing            | ⬜ Service tests                  | ⬜ Kubernetes ConfigMaps           |
-| ⬜ Metrics                        | ⬜ Kafka integration tests        | ⬜ Kubernetes Secrets              |
-| ⬜ Prometheus                     | ⬜ End-to-end tests               | ⬜ Horizontal worker scaling       |
-| ⬜ Grafana                        | ⬜ Concurrent worker tests        | ⬜ Health checks                   |
-| ⬜ Kafka consumer metrics         | ⬜ Failure scenario tests          | ⬜ Readiness probes                |
-| ⬜ Job processing metrics         | ⬜ Retry scenario tests            | ⬜ Liveness probes                 |
-|                                  | ⬜ DLQ tests                      | ⬜ CI/CD pipeline                  |
-|                                  | ⬜ Testcontainers integration     |                                   |
-
+- Event-driven job processing using Apache Kafka
+- Transactional Outbox Pattern
+- PostgreSQL as the source of truth
+- At-least-once event processing
+- Idempotent event execution
+- Atomic job claiming
+- Retry scheduling and retry limits
+- Dead Letter Queue management
+- Manual DLQ replay
+- Job execution history
+- Execution heartbeat tracking
+- Worker identification
+- Flyway database migrations
+- Docker Compose development environment
+- Unit testing of core services
 
 # 17. Important Distributed System Problems Being Solved
 
