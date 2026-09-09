@@ -26,26 +26,28 @@ public interface JobExecutionRepository extends JpaRepository<JobExecution, Stri
 
     @Modifying
     @Query(value = """
-            INSERT INTO job_executions
-            (
-                id,
-                job_id,
-                event_id,
-                status,
-                worker_id,
-                started_at
-            )
-            VALUES
-            (
-                :id,
-                :jobId,
-                :eventId,
-                :status,
-                :workerId,
-                :startedAt
-            )
-            ON CONFLICT (event_id) DO NOTHING
-            """, nativeQuery = true)
+        INSERT INTO job_executions
+        (
+            id,
+            job_id,
+            event_id,
+            status,
+            worker_id,
+            started_at,
+            last_heartbeat_at
+        )
+        VALUES
+        (
+            :id,
+            :jobId,
+            :eventId,
+            :status,
+            :workerId,
+            :startedAt,
+            :startedAt
+        )
+        ON CONFLICT (event_id) DO NOTHING
+        """, nativeQuery = true)
     int insertIfNotExists(
             @Param("id") String id,
             @Param("jobId") String jobId,
@@ -53,6 +55,19 @@ public interface JobExecutionRepository extends JpaRepository<JobExecution, Stri
             @Param("status") String status,
             @Param("workerId") String workerId,
             @Param("startedAt") LocalDateTime startedAt
+    );
+
+    @Modifying
+    @Query("""
+        UPDATE JobExecution e
+        SET e.lastHeartbeatAt = :heartbeatAt
+        WHERE e.eventId = :eventId
+          AND e.status = :processingStatus
+        """)
+    int updateHeartbeat(
+            @Param("eventId") String eventId,
+            @Param("processingStatus") ExecutionStatus processingStatus,
+            @Param("heartbeatAt") LocalDateTime heartbeatAt
     );
 
     @Modifying

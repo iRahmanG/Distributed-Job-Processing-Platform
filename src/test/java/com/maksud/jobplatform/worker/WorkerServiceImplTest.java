@@ -8,6 +8,7 @@ import com.maksud.jobplatform.job.repository.JobRepository;
 import com.maksud.jobplatform.job.service.JobLifecycleService;
 import com.maksud.jobplatform.outbox.dto.JobCreatedEvent;
 import com.maksud.jobplatform.worker.executer.JobExecutor;
+import com.maksud.jobplatform.worker.service.HeartbeatManager;
 import com.maksud.jobplatform.worker.service.JobExecutionService;
 import com.maksud.jobplatform.worker.service.WorkerServiceImpl;
 import netscape.javascript.JSObject;
@@ -38,6 +39,9 @@ public class WorkerServiceImplTest {
     private JobExecutionService jobExecutionService;
     @Mock
     private JobLifecycleService jobLifecycleService;
+    @Mock
+    private HeartbeatManager heartbeatManager;
+
 
     @InjectMocks
     private WorkerServiceImpl workerService;

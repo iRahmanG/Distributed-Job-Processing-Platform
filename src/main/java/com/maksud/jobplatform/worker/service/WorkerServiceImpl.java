@@ -23,6 +23,7 @@ public class WorkerServiceImpl implements WorkerService {
     private final JobExecutor jobExecutor;
     private final JobExecutionService jobExecutionService;
     private final JobLifecycleService jobLifecycleService;
+    private final HeartbeatManager heartbeatManager;
 
     @Override
     public void processJob(String message) {
@@ -32,11 +33,14 @@ public class WorkerServiceImpl implements WorkerService {
         JobCreatedEvent event;
 
         try {
+
             event = objectMapper.readValue(
                     message,
                     JobCreatedEvent.class
             );
+
         } catch (Exception e) {
+
             throw new RuntimeException(
                     "Invalid Kafka message",
                     e
@@ -87,7 +91,7 @@ public class WorkerServiceImpl implements WorkerService {
             return;
         }
 
-        // Reload after the bulk update
+        // Reload after bulk update
         Job processingJob = jobRepository.findById(event.jobId())
                 .orElseThrow(() ->
                         new IllegalArgumentException(
@@ -112,6 +116,7 @@ public class WorkerServiceImpl implements WorkerService {
 
             return;
         }
+        heartbeatManager.startHeartbeat(event.eventId());
 
         try {
 
@@ -119,6 +124,8 @@ public class WorkerServiceImpl implements WorkerService {
                     processingJob.getJobType(),
                     payload.getPayload()
             );
+
+            heartbeatManager.startHeartbeat(event.eventId());
 
             jobExecutionService.markCompleted(
                     event.eventId()
@@ -135,6 +142,8 @@ public class WorkerServiceImpl implements WorkerService {
             );
 
         } catch (Exception e) {
+
+            heartbeatManager.startHeartbeat(event.eventId());
 
             log.error(
                     "Failed processing job {}",

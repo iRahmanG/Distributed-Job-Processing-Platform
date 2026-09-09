@@ -68,4 +68,16 @@ public class JobExecutionService {
                 "local"
         );
     }
+
+    @Transactional
+    public boolean updateHeartbeat(String eventId) {
+
+        int updated = jobExecutionRepository.updateHeartbeat(
+                eventId,
+                ExecutionStatus.PROCESSING,
+                LocalDateTime.now()
+        );
+
+        return updated == 1;
+    }
 }
